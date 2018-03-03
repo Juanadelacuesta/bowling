@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -12,25 +14,44 @@ const (
 )
 
 func main() {
-	in := "| 1 4 | 4 5 | 6 / | 5 / | X | 0 1 | 7 / | 6 / | X | 2 / 6 |"
-	in = strings.Replace(in, " ", "", -1)
-	in = in[1:len(in)-1] + "|00"
+	file, err := os.Open(os.Args[1])
+	defer file.Close()
+	if err != nil {
+		os.Exit(1)
+	}
 
-	score := 0
-	frames := strings.Split(in, "|")
+	scanner := bufio.NewScanner(file)
+	if scanner.Scan() {
+		fmt.Println(getScore(scanner.Text()))
+	}
+	os.Exit(0)
+}
 
-	for i := 0; i < 10; i++ {
+func getScore(input string) (score int) {
+	frames := strings.Split(cleanInput(input), "|")
+	for i := 0; i <= 9; i++ {
 		score += getFrameScore(frames[i])
 
 		if isStrike(frames[i]) {
-			score += getStrikeBonus(frames[i+1])
+			if i < 8 {
+				score += getStrikeBonus(frames[i+1], frames[i+2])
+			}
+			if i == 8 {
+				score += getStrikeBonus(frames[i+1], "")
+			}
 		}
 
-		if isSplit(frames[i]) {
+		if isSplit(frames[i]) && i < 9 {
 			score += getSplitBonus(frames[i+1])
 		}
 	}
-	fmt.Println(score)
+	return
+}
+
+func cleanInput(input string) string {
+	input = strings.Replace(input, " ", "", -1)
+	input = input[1 : len(input)-1]
+	return input
 }
 
 func isStrike(frame string) bool {
@@ -55,18 +76,12 @@ func getFrameScore(f string) (score int) {
 	return
 }
 
-func getStrikeBonus(f string) (bonus int) {
-	return getFrameScore(f[:2])
+func getStrikeBonus(f1, f2 string) (bonus int) {
+	return getFrameScore((f1 + f2)[:2])
 }
 
 func getSplitBonus(f string) (bonus int) {
-	frame := strings.Split(f, "")
-	if frame[0] == "X" {
-		bonus = 10
-	} else {
-		bonus = aToI(frame[0])
-	}
-	return
+	return getFrameScore(f[:1])
 }
 
 func aToI(val string) int {
